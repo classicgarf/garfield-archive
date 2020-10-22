@@ -10,22 +10,33 @@ namespace GarfieldArchive
         public readonly string Basename;
         public readonly DateTime Date;
         public readonly int Year;
+        public readonly int Month;
+        public readonly string PadMonth;
+        public readonly string ISOdate;
 
         public ComicStrip(DateTime date)
         {
             Date = date;
             Year = int.Parse($"{Date:yyyy}");
+            Month = int.Parse($"{Date:MM}");
+            PadMonth = $"{Date:MM}";
             Basename = $"ga{Date:yyMMdd}";
+            ISOdate = $"{Date:yyyy-MM-dd}";
         }
 
-        public static ComicStrip FirstStrip => new ComicStrip(new DateTime(1978, 6, 19));
+        public static ComicStrip FirstStrip => new ComicStrip(MainForm.startStrip);
 
-        public string RemoteUrl => "http://strips.garfield.com/iimages1200/" + Year + "/" +
+        public string RemoteUrl => "http://professorgarfield.org/ipi1200/" + Year + "/" +
                                    GetFilename("gif");
 
         public string GetFilename(string extension)
         {
             return Basename + "." + extension;
+        }
+
+        public string GetISOFilename(string extension)
+        {
+            return ISOdate + "." + extension;
         }
 
         /// <summary>

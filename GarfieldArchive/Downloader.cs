@@ -12,6 +12,8 @@ namespace GarfieldArchive
         private readonly List<Task> _tasks = new List<Task>();
         private readonly Dictionary<int, DataRow> _yearRows = new Dictionary<int, DataRow>();
         public readonly DataTable DataTable = new DataTable();
+        public static string localDirectory { set; get; }
+        public static string oppositeDirectory { set; get; }
 
         public Downloader()
         {
@@ -70,41 +72,159 @@ namespace GarfieldArchive
 
         private static void ProcessStrip(ComicStrip strip, string folder)
         {
-            // Check if local year directory exists and create if it doesn't
-            var localDirectory = Path.Combine(folder, strip.Year.ToString());
+            var yearDirectory = Path.Combine(folder, strip.Year.ToString());
+            var monthDirectory = Path.Combine(folder, strip.Year.ToString(), strip.PadMonth);
+            // Check if local date directory exists and create if it doesn't
+            if (MainForm.monthFoldersCheck == true)
+            {
+                localDirectory = monthDirectory;
+                oppositeDirectory = yearDirectory;
+            }
+            else
+            {
+                localDirectory = yearDirectory;
+                oppositeDirectory = monthDirectory;
+            }
+                
             if (!Directory.Exists(localDirectory))
             {
                 Directory.CreateDirectory(localDirectory);
             }
 
-            // Initialize file pathes for GIF and PNG format
-            var gifPath = Path.Combine(localDirectory, strip.GetFilename("gif"));
-            var pngPath = Path.Combine(localDirectory, strip.GetFilename("png"));
+            // Initialize file path
+            var gifGAPath = Path.Combine(localDirectory, strip.GetFilename("gif"));
+            var gifISOPath = Path.Combine(localDirectory, strip.GetISOFilename("gif"));
+            var pngGAPath = Path.Combine(localDirectory, strip.GetFilename("png"));
+            var pngISOPath = Path.Combine(localDirectory, strip.GetISOFilename("png"));
 
-            // Check if PNG already exists
-            if (File.Exists(pngPath))
+            // Check if other sorting exists
+            var opgifGAPath = Path.Combine(oppositeDirectory, strip.GetFilename("gif"));
+            var opgifISOPath = Path.Combine(oppositeDirectory, strip.GetISOFilename("gif"));
+            var oppngGAPath = Path.Combine(oppositeDirectory, strip.GetFilename("png"));
+            var oppngISOPath = Path.Combine(oppositeDirectory, strip.GetISOFilename("png"));
+            if (File.Exists(opgifGAPath))
             {
-                var length = new FileInfo(pngPath).Length;
-                if (length > 0)
+                File.Move(opgifGAPath, gifGAPath);
+            }
+            if (File.Exists(oppngGAPath))
+            {
+                File.Move(oppngGAPath, pngGAPath);
+            }
+            if (File.Exists(opgifISOPath))
+            {
+                File.Move(opgifISOPath, gifISOPath);
+            }
+            if (File.Exists(oppngISOPath))
+            {
+                File.Move(oppngISOPath, pngISOPath);
+            }
+
+            if (MainForm.chooseISOCheck == true)
+            {
+                // Check if gaYYMMDD file exists
+                if (File.Exists(gifGAPath))
                 {
-                    File.Delete(gifPath);
+                    if (File.Exists(gifISOPath))
+                    {
+                        File.Delete(gifGAPath);
+                    }
+                    else
+                    {
+                        File.Move(gifGAPath, gifISOPath);
+                    }
+                    return;
+                }
+                if (File.Exists(pngGAPath))
+                {
+                    if (File.Exists(pngISOPath))
+                    {
+                        File.Delete(pngGAPath);
+                    }
+                    else
+                    {
+                        File.Move(pngGAPath, pngISOPath);
+                    }
+                    return;
+                }
+            }
+            else
+            {
+                // Check if YYYY-MM-DD file exists
+                if (File.Exists(gifISOPath))
+                {
+                    if (File.Exists(gifGAPath))
+                    {
+                        File.Delete(gifISOPath);
+                    }
+                    else
+                    {
+                        File.Move(gifISOPath, gifGAPath);
+                    }
+                    return;
+                }
+                if (File.Exists(pngISOPath))
+                {
+                    if (File.Exists(gifGAPath))
+                    {
+                        File.Delete(gifISOPath);
+                    }
+                    else
+                    {
+                        File.Move(gifISOPath, gifGAPath);
+                    }
                     return;
                 }
             }
 
-            // Download image on computer
-            if (!File.Exists(gifPath))
+            if (MainForm.convert2PNG == true)
             {
-                strip.Download(gifPath);
-            }
+                // Check if PNG already exists
+                if (File.Exists(pngGAPath) || File.Exists(pngISOPath))
+                {
+                    var length = new FileInfo(pngGAPath).Length;
+                    if (length > 0)
+                    {
+                        File.Delete(gifGAPath);
+                        File.Delete(gifISOPath);
+                        return;
+                    }
+                }
 
-            // Convert to PNG
-            ComicStrip.ConvertToPng(gifPath);
+                // Download image on computer
+                if (!File.Exists(gifGAPath))
+                {
+                    strip.Download(gifGAPath);
 
-            // When successfully converted to PNG, remove GIF image
-            if (File.Exists(pngPath))
+                }
+
+                // Convert to PNG
+                ComicStrip.ConvertToPng(gifGAPath);
+
+                // When successfully converted to PNG, remove GIF image
+                if (File.Exists(pngGAPath))
+                {
+                    File.Delete(gifGAPath);
+                }
+
+                if (MainForm.chooseISOCheck == true) { File.Move(pngGAPath, pngISOPath); File.Delete(pngGAPath); }
+            } 
+            else
             {
-                File.Delete(gifPath);
+                // Download image on computer
+                if (!File.Exists(gifGAPath))
+                {
+                    strip.Download(gifGAPath);
+                    if (MainForm.chooseISOCheck == true) { 
+                        if (File.Exists(gifISOPath)) {
+                            File.Delete(gifGAPath);
+                        }
+                        else
+                        {
+                            File.Move(gifGAPath, gifISOPath);
+                        }
+                        
+                    }
+                }
             }
         }
 
